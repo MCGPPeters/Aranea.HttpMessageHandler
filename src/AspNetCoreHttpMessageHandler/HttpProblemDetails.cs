@@ -1,13 +1,13 @@
-﻿namespace AspNetCoreHttpMessageHandler.Tests
-{
-    using System;
-    using System.Net.Http.Headers;
+﻿using System;
+using System.Net.Http.Headers;
 
+namespace AspNetCoreHttpMessageHandler
+{
     /// <summary>
-    ///   Abstract from RFC 7807
-    ///   This document defines a "problem detail" as a way to carry machine-
-    ///   readable details of errors in a HTTP response to avoid the need to
-    ///   define new error response formats for HTTP APIs.
+    ///     Abstract from RFC 7807
+    ///     This document defines a "problem detail" as a way to carry machine-
+    ///     readable details of errors in a HTTP response to avoid the need to
+    ///     define new error response formats for HTTP APIs.
     /// </summary>
     public class HttpProblemDetails
     {
@@ -28,11 +28,7 @@
         /// <summary>
         ///     The HTTP status code
         /// </summary>
-        public int Status
-        {
-            get => _status;
-            set => _status = value <= 0 ? 500 : value;
-        }
+        public int Status { get  => _status; set  => _status  = value  <= 0 ? 500 : value; }
 
         /// <summary>
         ///     An absolute URI that identifies the problem type. When
@@ -42,7 +38,8 @@
         /// </summary>
         public string Type
         {
-            get => _type;
+            get  =>
+            _type;
             set
             {
                 if (!string.IsNullOrWhiteSpace(value) && !Uri.IsWellFormedUriString(value, UriKind.Absolute))
@@ -69,7 +66,8 @@
         /// </summary>
         public string Instance
         {
-            get => _instance;
+            get  =>
+            _instance;
             set
             {
                 if (!string.IsNullOrWhiteSpace(value) && !Uri.IsWellFormedUriString(value, UriKind.Absolute))

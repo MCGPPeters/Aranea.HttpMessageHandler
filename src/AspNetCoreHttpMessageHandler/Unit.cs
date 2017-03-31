@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace AspNetCoreHttpMessageHandler.Tests
+namespace AspNetCoreHttpMessageHandler
 {
     public struct Unit : IComparable<Unit>, IEquatable<Unit>
     {

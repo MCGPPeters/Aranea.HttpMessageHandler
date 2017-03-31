@@ -1,7 +1,7 @@
 ﻿using System.Globalization;
 using System.Text;
 
-namespace AspNetCoreHttpMessageHandler.Tests
+namespace AspNetCoreHttpMessageHandler
 {
     internal static class StringExtensions
     {

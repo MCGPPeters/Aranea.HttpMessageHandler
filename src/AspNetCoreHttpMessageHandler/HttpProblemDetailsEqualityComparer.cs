@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace AspNetCoreHttpMessageHandler.Tests
+namespace AspNetCoreHttpMessageHandler
 {
     public class HttpProblemDetailsEqualityComparer : IEqualityComparer<HttpProblemDetails>
     {

@@ -1,14 +1,14 @@
-﻿namespace AspNetCoreHttpMessageHandler.Tests
-{
-    using System;
-    using System.IO;
-    using System.Net;
-    using System.Net.Http;
-    using System.Threading;
-    using System.Threading.Tasks;
-    using Eru;
-    using Microsoft.AspNetCore.Http;
+﻿using System;
+using System.IO;
+using System.Net;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+using Eru;
+using Microsoft.AspNetCore.Http;
 
+namespace AspNetCoreHttpMessageHandler
+{
     public class AspNetCoreHttpMessageHandler : HttpMessageHandler
     {
         private readonly RequestDelegate _application;
@@ -130,14 +130,11 @@
         private async Task<HttpResponseMessage> SendAsyncCore(HttpRequestMessage request,
             CancellationToken cancellationToken)
         {
-
             if (_useCookies)
             {
                 var cookieHeader = CookieContainer.GetCookieHeader(request.RequestUri);
                 if (!string.IsNullOrEmpty(cookieHeader))
-                {
                     request.Headers.Add("Cookie", cookieHeader);
-                }
             }
 
             var requestState = new RequestState(request, cancellationToken);

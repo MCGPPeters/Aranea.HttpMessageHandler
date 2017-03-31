@@ -1,4 +1,4 @@
-namespace Eru
+namespace AspNetCoreHttpMessageHandler
 {
     public enum ArgumentValidationError
     {

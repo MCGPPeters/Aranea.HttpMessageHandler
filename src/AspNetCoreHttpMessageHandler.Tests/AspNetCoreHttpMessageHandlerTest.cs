@@ -1,20 +1,19 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Threading.Tasks;
-using Eru;
 namespace AspNetCoreHttpMessageHandler.Tests
 {
+    using System;
+    using System.Collections.Generic;
+    using System.IO;
+    using System.Linq;
+    using System.Net;
+    using System.Net.Http;
+    using System.Net.Http.Headers;
+    using System.Threading.Tasks;
     using FsCheck;
     using FsCheck.Xunit;
     using Microsoft.AspNetCore.Http;
     using Xunit;
 
-    public class AspNetCoreHttpMessageHandlerProperties
+    public class AspNetCoreHttpMessageHandlerTest
     {
         [Property(Verbose = true,
             DisplayName = "When sending a request to an endpoint, an expected result should be returned")]
@@ -120,11 +119,11 @@ namespace AspNetCoreHttpMessageHandler.Tests
                 await ReadToEnd(context.Request);
             }
 
-            if(context.Request.Path == "/redirect-301-absolute-setcookie")
+            if (context.Request.Path == "/redirect-301-absolute-setcookie")
             {
                 context.Response.StatusCode = 302;
-                context.Response.Headers.Add("Location", new[] { "http://localhost/redirect" });
-                context.Response.Headers.Add("Set-Cookie", new[] { "foo=bar" });
+                context.Response.Headers.Add("Location", new[] {"http://localhost/redirect"});
+                context.Response.Headers.Add("Set-Cookie", new[] {"foo=bar"});
                 await ReadToEnd(context.Request);
             }
 
@@ -143,10 +142,10 @@ namespace AspNetCoreHttpMessageHandler.Tests
             }
 
             if (context.Request.Path == "/redirect-302-relative-setcookie")
-                    {
+            {
                 context.Response.StatusCode = 302;
-                context.Response.Headers.Add("Location", new[] { "redirect" });
-                context.Response.Headers.Add("Set-Cookie", new[] { "foo=bar" });
+                context.Response.Headers.Add("Location", new[] {"redirect"});
+                context.Response.Headers.Add("Set-Cookie", new[] {"foo=bar"});
                 await ReadToEnd(context.Request);
             }
 
@@ -266,58 +265,49 @@ namespace AspNetCoreHttpMessageHandler.Tests
             return httpMessageHandler;
         }
 
-        [Fact(DisplayName = "Authorization header is removed on redirect")]
-        public async Task Test7()
+        [Theory(DisplayName = "When redirecting, cookies should be passed along")]
+        [InlineData("/redirect-301-absolute-setcookie")]
+        [InlineData("/redirect-302-relative-setcookie")]
+        public async Task Test15(string path)
         {
             var httpMessageHandler = CreateAspNetCoreHttpMessageHandlerForRedirectTesting();
+            httpMessageHandler.UseCookies(true);
 
             using (var client = new HttpClient(httpMessageHandler)
             {
                 BaseAddress = new Uri("http://localhost")
             })
             {
-                client.DefaultRequestHeaders.Authorization = AuthenticationHeaderValue.Parse("foo");
-                var response = await client.GetAsync("/redirect-301-absolute");
+                var response = await client.GetAsync(path);
 
-                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-                Assert.Equal(null, response.RequestMessage.Headers.Authorization);
+                Assert.Equal("foo=bar", response.RequestMessage.Headers.GetValues("Cookie").Single());
             }
         }
 
-        [Fact(DisplayName = "Redirect does not take place on POST and 307")]
-        public async Task Test8()
+        [Fact(DisplayName = "When the headers are flushed, the response should complete")]
+        public async Task Should_complete_when_headers_are_flushed()
         {
-            var httpMessageHandler = CreateAspNetCoreHttpMessageHandlerForRedirectTesting();
-
-            using (var client = new HttpClient(httpMessageHandler)
+            var tcs = new TaskCompletionSource<int>(0);
+            RequestDelegate requestDelegate = async context =>
             {
-                BaseAddress = new Uri("http://localhost")
-            })
-            {
-                var response = await client.PostAsync("/redirect-307-absolute", new StringContent("the-body"));
+                context.Response.StatusCode = 200;
+                await context.Response.WriteAsync("Blurg"); // Writing to response stream should flush the headers.
+                await tcs.Task;
+            };
 
-                Assert.Equal(HttpStatusCode.TemporaryRedirect, response.StatusCode);
-                Assert.Equal("http://localhost/redirect-307-absolute", response.RequestMessage.RequestUri.AbsoluteUri);
-            }
-        }
+            var maybeAHandler = AspNetCoreHttpMessageHandler.Create(requestDelegate);
+            var httpMessageHandler = maybeAHandler.Match(
+                error => null,
+                handler => handler);
 
-        [Fact(DisplayName = "Redirect does not alter HTTP method")]
-        public async Task Test9()
-        {
-            var httpMessageHandler = CreateAspNetCoreHttpMessageHandlerForRedirectTesting();
+            httpMessageHandler.UseCookies(true);
 
-            using (var client = new HttpClient(httpMessageHandler)
-            {
-                BaseAddress = new Uri("http://localhost")
-            })
-            {
-                var response =
-                    await client.SendAsync(new HttpRequestMessage(HttpMethod.Head, "/redirect-307-absolute"));
+            var httpClient = new HttpClient(httpMessageHandler);
 
-                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-                Assert.Equal("http://localhost/redirect", response.RequestMessage.RequestUri.AbsoluteUri);
-                Assert.Equal(HttpMethod.Head, response.RequestMessage.Method);
-            }
+            var responseTask = httpClient.GetAsync("http://example.com", HttpCompletionOption.ResponseHeadersRead);
+            if (await Task.WhenAny(responseTask, Task.Delay(5000)) != responseTask)
+                throw new TimeoutException("responseTask did not complete");
+            tcs.SetResult(0);
         }
 
 
@@ -374,7 +364,9 @@ namespace AspNetCoreHttpMessageHandler.Tests
                 .Match(error => Assert.Equal(InvalidOperation.NotPermittedToChangeCookieUsageAfterDisposing, error));
         }
 
-        [Fact(DisplayName = "When caught in a redirect loop, the maximum allowed number of redirects should not be exceeded")]
+        [Fact(
+            DisplayName =
+                "When caught in a redirect loop, the maximum allowed number of redirects should not be exceeded")]
         public async Task Test14()
         {
             var httpMessageHandler = CreateAspNetCoreHttpMessageHandlerForRedirectTesting();
@@ -400,25 +392,6 @@ namespace AspNetCoreHttpMessageHandler.Tests
                 Assert.Equal(expectedHttpProblemDetails, actualProblemDetails,
                     new HttpProblemDetailsEqualityComparer());
                 Assert.Equal("application/problem+json", response.Content.Headers.ContentType.MediaType);
-            }
-        }
-
-        [Theory(DisplayName = "When redirecting, cookies should be passed along")]
-        [InlineData("/redirect-301-absolute-setcookie")]
-        [InlineData("/redirect-302-relative-setcookie")]
-        public async Task Test15(string path)
-        {
-            var httpMessageHandler = CreateAspNetCoreHttpMessageHandlerForRedirectTesting();
-            httpMessageHandler.UseCookies(true);
-
-            using (var client = new HttpClient(httpMessageHandler)
-            {
-                BaseAddress = new Uri("http://localhost")
-            })
-            {
-                var response = await client.GetAsync(path);
-
-                Assert.Equal("foo=bar", response.RequestMessage.Headers.GetValues("Cookie").Single());
             }
         }
 
@@ -473,23 +446,23 @@ namespace AspNetCoreHttpMessageHandler.Tests
 
             var uri = new Uri("http://localhost/");
 
-            RequestDelegate inner = async context =>
+            async Task Inner(HttpContext context)
             {
                 context.Response.Headers.Append("Location", "/");
                 await context.Response.WriteAsync("Test");
-            };
+            }
 
-            RequestDelegate requestDelegate = async context =>
+            async Task RequestDelegate(HttpContext context)
             {
                 context.Response.OnStarting(_ =>
                 {
                     context.Response.Cookies.Append(cookieName1, "c1");
                     return Task.FromResult(0);
                 }, null);
-                await inner(context);
-            };
+                await Inner(context);
+            }
 
-            var maybeAHandler = AspNetCoreHttpMessageHandler.Create(requestDelegate);
+            var maybeAHandler = AspNetCoreHttpMessageHandler.Create(RequestDelegate);
             var httpMessageHandler = maybeAHandler.Match(
                 error => null,
                 handler => handler);
@@ -505,6 +478,60 @@ namespace AspNetCoreHttpMessageHandler.Tests
                 .CookieContainer
                 .GetCookies(uri)[cookieName1]
                 .Value);
+        }
+
+        [Fact(DisplayName = "Authorization header is removed on redirect")]
+        public async Task Test7()
+        {
+            var httpMessageHandler = CreateAspNetCoreHttpMessageHandlerForRedirectTesting();
+
+            using (var client = new HttpClient(httpMessageHandler)
+            {
+                BaseAddress = new Uri("http://localhost")
+            })
+            {
+                client.DefaultRequestHeaders.Authorization = AuthenticationHeaderValue.Parse("foo");
+                var response = await client.GetAsync("/redirect-301-absolute");
+
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                Assert.Equal(null, response.RequestMessage.Headers.Authorization);
+            }
+        }
+
+        [Fact(DisplayName = "Redirect does not take place on POST and 307")]
+        public async Task Test8()
+        {
+            var httpMessageHandler = CreateAspNetCoreHttpMessageHandlerForRedirectTesting();
+
+            using (var client = new HttpClient(httpMessageHandler)
+            {
+                BaseAddress = new Uri("http://localhost")
+            })
+            {
+                var response = await client.PostAsync("/redirect-307-absolute", new StringContent("the-body"));
+
+                Assert.Equal(HttpStatusCode.TemporaryRedirect, response.StatusCode);
+                Assert.Equal("http://localhost/redirect-307-absolute", response.RequestMessage.RequestUri.AbsoluteUri);
+            }
+        }
+
+        [Fact(DisplayName = "Redirect does not alter HTTP method")]
+        public async Task Test9()
+        {
+            var httpMessageHandler = CreateAspNetCoreHttpMessageHandlerForRedirectTesting();
+
+            using (var client = new HttpClient(httpMessageHandler)
+            {
+                BaseAddress = new Uri("http://localhost")
+            })
+            {
+                var response =
+                    await client.SendAsync(new HttpRequestMessage(HttpMethod.Head, "/redirect-307-absolute"));
+
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                Assert.Equal("http://localhost/redirect", response.RequestMessage.RequestUri.AbsoluteUri);
+                Assert.Equal(HttpMethod.Head, response.RequestMessage.Method);
+            }
         }
     }
 }

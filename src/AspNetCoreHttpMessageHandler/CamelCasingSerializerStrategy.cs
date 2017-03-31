@@ -1,4 +1,4 @@
-﻿namespace AspNetCoreHttpMessageHandler.Tests
+﻿namespace AspNetCoreHttpMessageHandler
 {
     public class CamelCasingSerializerStrategy : PocoJsonSerializerStrategy
     {

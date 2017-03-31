@@ -1,7 +1,8 @@
 // ReSharper disable once CheckNamespace
+
+using Microsoft.AspNetCore.Http;
+
 namespace System.Net.Http
 {
-    using Microsoft.AspNetCore.Http;
-
     public delegate RequestDelegate Middleware(RequestDelegate requestDelegate);
 }
