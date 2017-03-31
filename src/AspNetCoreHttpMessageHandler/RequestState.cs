@@ -1,8 +1,5 @@
-﻿
-
-namespace AspNetCoreHttpMessageHandler.Tests
+﻿namespace AspNetCoreHttpMessageHandler
 {
-
     using System;
     using System.Linq;
     using System.Net;
@@ -17,7 +14,7 @@ namespace AspNetCoreHttpMessageHandler.Tests
         private readonly HttpRequestMessage _request;
         private readonly ResponseStream _responseStream;
         private readonly TaskCompletionSource<HttpResponseMessage> _responseTcs;
-        private ResponseFeature _responseFeature;
+        private readonly ResponseFeature _responseFeature;
 
         internal RequestState(HttpRequestMessage request, CancellationToken cancellationToken)
         {

@@ -1,18 +1,15 @@
-﻿// Copyright (c) .NET Foundation. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
-
-using System;
-using System.IO;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.Features;
-
-namespace AspNetCoreHttpMessageHandler.Tests
+﻿namespace AspNetCoreHttpMessageHandler
 {
+    using System;
+    using System.IO;
+    using System.Threading.Tasks;
+    using Microsoft.AspNetCore.Http;
+    using Microsoft.AspNetCore.Http.Features;
+
     internal class ResponseFeature : IHttpResponseFeature
     {
-        private Func<Task> _responseStartingAsync = () => Task.FromResult(true);
         private Func<Task> _responseCompletedAsync = () => Task.FromResult(true);
+        private Func<Task> _responseStartingAsync = () => Task.FromResult(true);
 
         public ResponseFeature()
         {
@@ -37,9 +34,7 @@ namespace AspNetCoreHttpMessageHandler.Tests
         public void OnStarting(Func<object, Task> callback, object state)
         {
             if (HasStarted)
-            {
                 throw new InvalidOperationException();
-            }
 
             var prior = _responseStartingAsync;
             _responseStartingAsync = async () =>

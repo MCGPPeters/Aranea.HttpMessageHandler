@@ -1,8 +1,9 @@
 // ReSharper disable once CheckNamespace
+
+using System;
+
 namespace Eru
 {
-    using System;
-
     public static class Either
     {
         public static Either<TLeft, TRight> Return<TLeft, TRight>(this TRight value)
