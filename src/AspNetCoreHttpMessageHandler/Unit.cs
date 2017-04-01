@@ -1,7 +1,7 @@
-﻿using System;
-
-namespace AspNetCoreHttpMessageHandler
+﻿namespace AspNetCoreHttpMessageHandler
 {
+    using System;
+
     public struct Unit : IComparable<Unit>, IEquatable<Unit>
     {
         public static readonly Unit Instance = new Unit();

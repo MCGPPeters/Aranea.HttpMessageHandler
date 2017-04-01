@@ -1,8 +1,8 @@
-﻿using System;
-using System.Net.Http.Headers;
-
-namespace AspNetCoreHttpMessageHandler
+﻿namespace AspNetCoreHttpMessageHandler
 {
+    using System;
+    using System.Net.Http.Headers;
+
     /// <summary>
     ///     Abstract from RFC 7807
     ///     This document defines a "problem detail" as a way to carry machine-
