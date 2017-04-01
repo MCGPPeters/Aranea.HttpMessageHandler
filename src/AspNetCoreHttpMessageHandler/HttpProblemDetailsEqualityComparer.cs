@@ -1,7 +1,7 @@
-using System.Collections.Generic;
-
 namespace AspNetCoreHttpMessageHandler
 {
+    using System.Collections.Generic;
+
     public class HttpProblemDetailsEqualityComparer : IEqualityComparer<HttpProblemDetails>
     {
         public bool Equals(HttpProblemDetails x, HttpProblemDetails y)

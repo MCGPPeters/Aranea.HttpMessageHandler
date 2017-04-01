@@ -1,14 +1,14 @@
-﻿using System;
-using System.IO;
-using System.Net;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
-using Eru;
-using Microsoft.AspNetCore.Http;
-
-namespace AspNetCoreHttpMessageHandler
+﻿namespace AspNetCoreHttpMessageHandler
 {
+    using System;
+    using System.IO;
+    using System.Net;
+    using System.Net.Http;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using Eru;
+    using Microsoft.AspNetCore.Http;
+
     public class AspNetCoreHttpMessageHandler : HttpMessageHandler
     {
         private readonly RequestDelegate _application;
@@ -90,11 +90,12 @@ namespace AspNetCoreHttpMessageHandler
             {
                 if (redirectCount >= AutoRedirectLimit)
                 {
-                    response.Content = new StringContent(SimpleJson.SerializeObject(new HttpProblemDetails
+                    var httpProblemDetails = new HttpProblemDetails
                     {
                         Detail = $"The number of details exceeded the maximum allowed number of {AutoRedirectLimit}",
                         Title = "Too many redirects"
-                    }, new CamelCasingSerializerStrategy()));
+                    };
+                    response.Content = new StringContent(SimpleJson.SerializeObject(httpProblemDetails, new CamelCasingSerializerStrategy()));
                     response.Content.Headers.ContentType = HttpProblemDetails.MediaTypeWithQualityHeaderValue;
                     return response;
                 }

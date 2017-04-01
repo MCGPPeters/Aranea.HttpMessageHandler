@@ -1,13 +1,13 @@
 ﻿// Copyright (c) Microsoft Open Technologies, Inc. All rights reserved. See License.txt in the project root for license information.
 
-using System;
-using System.Collections.Concurrent;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
-
 namespace AspNetCoreHttpMessageHandler
 {
+    using System;
+    using System.Collections.Concurrent;
+    using System.IO;
+    using System.Threading;
+    using System.Threading.Tasks;
+
     // This steam accepts writes from the server/app, buffers them internally, and returns the data via Reads
     // when requested by the client.
     internal class ResponseStream : Stream
