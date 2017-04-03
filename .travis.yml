@@ -4,3 +4,5 @@ script:
   - chmod +x ./build.sh  
   - git update-index --add --chmod=+x build.sh
   - ./build.sh
+dist: trusty
+sudo: required
