@@ -73,8 +73,23 @@ Task("NuGetPack")
     DotNetCorePack("./src/AspNetCoreHttpMessageHandler", settings);
 });
 
+Task("NuGetPublish")
+    .IsDependentOn("NuGetPack")
+    .Does(() =>
+    {
+        var APIKey = EnvironmentVariable("NUGETAPIKEY");
+
+        var packages = GetFiles("./artifacts/*.nupkg");
+        NuGetPush(packages, new NuGetPushSettings {
+            Source = "https://www.nuget.org/api/v2/package",
+            ApiKey = APIKey
+        }
+    });
+
+    })
+
 Task("Default")
     .IsDependentOn("RunTests")
-    .IsDependentOn("NuGetPack");
+    .IsDependentOn("NuGetPublish");
 
 RunTarget(target);
