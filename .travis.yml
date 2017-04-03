@@ -1,4 +1,6 @@
 language: csharp
+dotnet: 1.0.1
 script:
+  - chmod +x ./build.sh  
   - git update-index --add --chmod=+x build.sh
   - ./build.sh
