@@ -38,14 +38,14 @@ Task("Build")
     .IsDependentOn("RestorePackages")
     .Does(() =>
 {
-    var buildSettings = new MSBuildSettings {
-        Configuration = configuration,
-        ToolVersion = MSBuildToolVersion.VS2017,
-        Verbosity = Verbosity.Minimal,
-        ArgumentCustomization = args => args.Append("/p:SemVer=" + versionInfo.NuGetVersionV2)
-    };
-    Information(versionInfo.NuGetVersionV2);
-    MSBuild(solution, buildSettings);
+    var buildSettings = new DotNetCoreBuildSettings
+     {
+         Framework = "netcoreapp1.1",
+         Configuration = configuration,
+         ArgumentCustomization = args => args.Append("/p:SemVer=" + versionInfo.NuGetVersionV2)
+     };
+
+    DotNetCoreBuild(solution, buildSettings);
 });
 
 
@@ -55,7 +55,7 @@ Task("RunTests")
 {
         var settings =  new DotNetCoreTestSettings 
         { 
-            NoBuild = true
+            
         };
         DotNetCoreTest("./src/AspNetCoreHttpMessageHandler.Tests/AspNetCoreHttpMessageHandler.Tests.csproj", settings);
 });
