@@ -7,9 +7,11 @@
     <Authors>Maurice CGP Peters</Authors>
     <PackageProjectUrl>https://github.com/MCGPPeters/AspNetCoreHttpMessageHandler</PackageProjectUrl>
     <PackageLicenseUrl>https://github.com/MCGPPeters/AspNetCoreHttpMessageHandler/blob/master/LICENSE</PackageLicenseUrl>
-    <RepositoryUrl>https://github.com/MCGPPeters/AspNetCoreHttpMessageHandler</RepositoryUrl>
+    <RepositoryUrl>https://github.com/MCGPPeters/AspNetCoreHttpMessageHandler.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>asp.net core httpmessagehandler test</PackageTags>
+    <Description />
+    <Version>$(SemVer)</Version>
   </PropertyGroup>
 
   <ItemGroup>
