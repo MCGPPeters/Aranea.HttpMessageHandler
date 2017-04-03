@@ -8,15 +8,16 @@ namespace AspNetCoreHttpMessageHandler.Tests
     using System.Net.Http;
     using System.Net.Http.Headers;
     using System.Threading.Tasks;
-    using FsCheck;
-    using FsCheck.Xunit;
     using Microsoft.AspNetCore.Http;
     using Xunit;
 
     public class AspNetCoreHttpMessageHandlerTest
     {
-        [Property(Verbose = true,
-            DisplayName = "When sending a request to an endpoint, an expected result should be returned")]
+        [Theory(DisplayName = "When sending a request to an endpoint, an expected result should be returned")]
+        [InlineData("foo")]
+        [InlineData("bar")]
+        [InlineData("so")]
+        [InlineData("what")]
         public void Test1(string requestPath)
         {
             var httpClient = AspNetCoreHttpMessageHandler
@@ -36,7 +37,11 @@ namespace AspNetCoreHttpMessageHandler.Tests
             Assert.Equal(HttpStatusCode.OK, responseMessage.StatusCode);
         }
 
-        [Property(Verbose = true, DisplayName = "Form data should be handled properly")]
+        [Theory( DisplayName = "Form data should be handled properly")]
+        [InlineData("Maurice")]
+        [InlineData("Damian")]
+        [InlineData("Who")]
+        [InlineData("Else")]
         public void Test2(string targetOfGreeting)
         {
             var httpClient = AspNetCoreHttpMessageHandler
@@ -62,11 +67,14 @@ namespace AspNetCoreHttpMessageHandler.Tests
             Assert.Equal(response.Content.ReadAsStringAsync().Result, $"Hello {targetOfGreeting}");
         }
 
-        [Property(Verbose = true,
-            DisplayName =
+        [Theory(DisplayName =
                 "The http context should contain the Content-Length header when the content isn't empty and it's value should be correct"
         )]
-        public void Test3(NonEmptyString content)
+        [InlineData("Hello")]
+        [InlineData("world")]
+        [InlineData("anybody")]
+        [InlineData("out there?")]
+        public void Test3(string content)
         {
             HttpContext httpContext = null;
             var maybeAHandler = AspNetCoreHttpMessageHandler.Create(context =>
@@ -80,12 +88,12 @@ namespace AspNetCoreHttpMessageHandler.Tests
 
             using (var httpClient = new HttpClient(httpMessageHandler))
             {
-                var stringContent = new StringContent(content.Get);
+                var stringContent = new StringContent(content);
                 httpClient.PostAsync("http://localhost/", stringContent).Wait();
             }
 
             Assert.True(httpContext.Request.Headers.ContainsKey("Content-Length"));
-            Assert.Equal(httpContext.Request.ContentLength, content.Get.Length);
+            Assert.Equal(httpContext.Request.ContentLength, content.Length);
         }
 
         private static readonly Func<HttpRequest, Task<string>> ReadToEnd = async request =>
