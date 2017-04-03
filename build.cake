@@ -44,6 +44,7 @@ Task("Build")
         Verbosity = Verbosity.Minimal,
         ArgumentCustomization = args => args.Append("/p:SemVer=" + versionInfo.NuGetVersionV2)
     };
+    Information(versionInfo.NuGetVersionV2);
     MSBuild(solution, buildSettings);
 });
 
@@ -59,34 +60,27 @@ Task("RunTests")
         DotNetCoreTest("./src/AspNetCoreHttpMessageHandler.Tests/AspNetCoreHttpMessageHandler.Tests.csproj", settings);
 });
 
-Task("NuGetPack")
+Task("CopyPackages")
     .IsDependentOn("Build")
     .Does(() =>
 {
-    Information("Version " + versionInfo.NuGetVersionV2);
-    var settings = new DotNetCorePackSettings
-    {
-        Configuration = "Release",
-        OutputDirectory = "./artifacts/",
-        NoBuild = true
-    };
-    DotNetCorePack("./src/AspNetCoreHttpMessageHandler", settings);
+    var files = GetFiles("./src/**/*.nupkg");
+    CopyFiles(files, "./artifacts");
+
 });
 
 Task("NuGetPublish")
-    .IsDependentOn("NuGetPack")
+    .IsDependentOn("CopyPackages")
     .Does(() =>
     {
+         
         var APIKey = EnvironmentVariable("NUGETAPIKEY");
-
         var packages = GetFiles("./artifacts/*.nupkg");
         NuGetPush(packages, new NuGetPushSettings {
             Source = "https://www.nuget.org/api/v2/package",
             ApiKey = APIKey
-        }
+        });
     });
-
-    })
 
 Task("Default")
     .IsDependentOn("RunTests")
