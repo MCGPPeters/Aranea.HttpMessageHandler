@@ -1,0 +1,4 @@
+language: csharp
+script:
+  - git update-index --add --chmod=+x build.sh
+  - ./build.sh
