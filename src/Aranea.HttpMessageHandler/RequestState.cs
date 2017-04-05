@@ -1,14 +1,14 @@
-﻿namespace AspNetCoreHttpMessageHandler
-{
-    using System;
-    using System.Linq;
-    using System.Net;
-    using System.Net.Http;
-    using System.Threading;
-    using System.Threading.Tasks;
-    using Microsoft.AspNetCore.Http;
-    using Microsoft.AspNetCore.Http.Features;
+﻿using System;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 
+namespace Aranea.HttpMessageHandler
+{
     internal class RequestState : IDisposable
     {
         private readonly HttpRequestMessage _request;

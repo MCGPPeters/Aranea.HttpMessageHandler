@@ -1,8 +1,8 @@
-﻿namespace AspNetCoreHttpMessageHandler
-{
-    using System;
-    using System.Net.Http.Headers;
+﻿using System;
+using System.Net.Http.Headers;
 
+namespace Aranea.HttpMessageHandler
+{
     /// <summary>
     ///     Abstract from RFC 7807
     ///     This document defines a "problem detail" as a way to carry machine-

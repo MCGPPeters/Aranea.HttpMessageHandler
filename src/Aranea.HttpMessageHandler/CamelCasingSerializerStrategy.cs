@@ -1,4 +1,4 @@
-﻿namespace AspNetCoreHttpMessageHandler
+﻿namespace Aranea.HttpMessageHandler
 {
     public class CamelCasingSerializerStrategy : PocoJsonSerializerStrategy
     {

@@ -1,7 +1,7 @@
-﻿namespace AspNetCoreHttpMessageHandler
-{
-    using System;
+﻿using System;
 
+namespace Aranea.HttpMessageHandler
+{
     public struct Unit : IComparable<Unit>, IEquatable<Unit>
     {
         public static readonly Unit Instance = new Unit();

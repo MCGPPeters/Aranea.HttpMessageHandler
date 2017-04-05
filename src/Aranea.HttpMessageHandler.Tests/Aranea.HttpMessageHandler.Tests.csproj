@@ -14,7 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\AspNetCoreHttpMessageHandler\AspNetCoreHttpMessageHandler.csproj" />
+    <ProjectReference Include="..\Aranea.HttpMessageHandler\Aranea.HttpMessageHandler.csproj" />
   </ItemGroup>
 
   <ItemGroup>

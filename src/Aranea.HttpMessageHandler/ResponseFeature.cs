@@ -1,11 +1,11 @@
-﻿namespace AspNetCoreHttpMessageHandler
-{
-    using System;
-    using System.IO;
-    using System.Threading.Tasks;
-    using Microsoft.AspNetCore.Http;
-    using Microsoft.AspNetCore.Http.Features;
+﻿using System;
+using System.IO;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 
+namespace Aranea.HttpMessageHandler
+{
     internal class ResponseFeature : IHttpResponseFeature
     {
         private Func<Task> _responseCompletedAsync = () => Task.FromResult(true);

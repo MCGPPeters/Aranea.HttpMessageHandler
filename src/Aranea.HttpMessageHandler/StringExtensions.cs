@@ -1,8 +1,8 @@
-﻿namespace AspNetCoreHttpMessageHandler
-{
-    using System.Globalization;
-    using System.Text;
+﻿using System.Globalization;
+using System.Text;
 
+namespace Aranea.HttpMessageHandler
+{
     internal static class StringExtensions
     {
         internal static string FormatWith(this string format, params object[] args)

@@ -6,7 +6,7 @@
 var target          = Argument("target", "Default");
 var configuration   = Argument("configuration", "Release");
 var artifactsDir    = Directory("./artifacts");
-var solution        = "./src/AspNetCoreHttpMessageHandler.sln";
+var solution        = "./src/Aranea.HttpMessageHandler.sln";
 GitVersion versionInfo = null;
 
 
@@ -57,7 +57,7 @@ Task("RunTests")
         { 
             
         };
-        DotNetCoreTest("./src/AspNetCoreHttpMessageHandler.Tests/AspNetCoreHttpMessageHandler.Tests.csproj", settings);
+        DotNetCoreTest("./src/Aranea.HttpMessageHandler.Tests/Aranea.HttpMessageHandler.Tests.csproj", settings);
 });
 
 Task("CopyPackages")

@@ -1,4 +1,4 @@
-namespace AspNetCoreHttpMessageHandler.Tests
+namespace Aranea.HttpMessageHandler.Tests
 {
     using System;
     using System.Collections.Generic;
@@ -10,8 +10,9 @@ namespace AspNetCoreHttpMessageHandler.Tests
     using System.Threading.Tasks;
     using Microsoft.AspNetCore.Http;
     using Xunit;
+    using Aranea.HttpMessageHandler;
 
-    public class AspNetCoreHttpMessageHandlerTest
+    public class HttpMessageHandlerTest
     {
         [Theory(DisplayName = "When sending a request to an endpoint, an expected result should be returned")]
         [InlineData("foo")]

@@ -1,4 +1,4 @@
-namespace AspNetCoreHttpMessageHandler
+namespace Aranea.HttpMessageHandler
 {
     public enum ArgumentValidationError
     {

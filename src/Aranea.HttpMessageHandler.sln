@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.26228.9
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AspNetCoreHttpMessageHandler.Tests", "AspNetCoreHttpMessageHandler.Tests\AspNetCoreHttpMessageHandler.Tests.csproj", "{2208C031-8F70-4CEA-B235-13F2F4457DEE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Aranea.HttpMessageHandler.Tests", "Aranea.HttpMessageHandler.Tests\Aranea.HttpMessageHandler.Tests.csproj", "{2208C031-8F70-4CEA-B235-13F2F4457DEE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AspNetCoreHttpMessageHandler", "AspNetCoreHttpMessageHandler\AspNetCoreHttpMessageHandler.csproj", "{AA33188E-9AA9-42EC-A922-6E9DC0918B38}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aranea.HttpMessageHandler", "Aranea.HttpMessageHandler\Aranea.HttpMessageHandler.csproj", "{AA33188E-9AA9-42EC-A922-6E9DC0918B38}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

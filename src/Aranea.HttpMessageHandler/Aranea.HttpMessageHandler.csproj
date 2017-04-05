@@ -5,9 +5,9 @@
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
     <Authors>Maurice CGP Peters</Authors>
-    <PackageProjectUrl>https://github.com/MCGPPeters/AspNetCoreHttpMessageHandler</PackageProjectUrl>
-    <PackageLicenseUrl>https://github.com/MCGPPeters/AspNetCoreHttpMessageHandler/blob/master/LICENSE</PackageLicenseUrl>
-    <RepositoryUrl>https://github.com/MCGPPeters/AspNetCoreHttpMessageHandler.git</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/MCGPPeters/Aranea.HttpMessageHandler</PackageProjectUrl>
+    <PackageLicenseUrl>https://github.com/MCGPPeters/Aranea.HttpMessageHandler/blob/master/LICENSE</PackageLicenseUrl>
+    <RepositoryUrl>https://github.com/MCGPPeters/Aranea.HttpMessageHandler.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>asp.net core httpmessagehandler test</PackageTags>
     <Description />

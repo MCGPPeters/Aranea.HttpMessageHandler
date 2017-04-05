@@ -1,4 +1,4 @@
-﻿namespace AspNetCoreHttpMessageHandler
+﻿namespace Aranea.HttpMessageHandler
 {
     using System;
     using System.IO;
@@ -6,8 +6,8 @@
     using System.Net.Http;
     using System.Threading;
     using System.Threading.Tasks;
-    using Eru;
     using Microsoft.AspNetCore.Http;
+    using Eru;
 
     public class AspNetCoreHttpMessageHandler : HttpMessageHandler
     {
