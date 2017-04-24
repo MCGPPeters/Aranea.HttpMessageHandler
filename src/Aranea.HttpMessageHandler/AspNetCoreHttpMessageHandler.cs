@@ -53,24 +53,24 @@
         }
 
 
-        public static Either<ArgumentValidationError, AspNetCoreHttpMessageHandler> Create(
+        public static Either<ArgumentNullException, AspNetCoreHttpMessageHandler> Create(
             RequestDelegate requestDelegate)
         {
             if (requestDelegate == null)
                 return
-                    Either<ArgumentValidationError, AspNetCoreHttpMessageHandler>.Create(
-                        ArgumentValidationError.ArgumentIsNull);
-            return Either<ArgumentValidationError, AspNetCoreHttpMessageHandler>.Create(
+                    Either<ArgumentNullException, AspNetCoreHttpMessageHandler>.Create(
+                        new ArgumentNullException(nameof(requestDelegate)));
+            return Either<ArgumentNullException, AspNetCoreHttpMessageHandler>.Create(
                 new AspNetCoreHttpMessageHandler(requestDelegate));
         }
 
-        public static Either<ArgumentValidationError, AspNetCoreHttpMessageHandler> Create(Middleware middleware)
+        public static Either<ArgumentNullException, AspNetCoreHttpMessageHandler> Create(Middleware middleware)
         {
             if (middleware == null)
                 return
-                    Either<ArgumentValidationError, AspNetCoreHttpMessageHandler>.Create(
-                        ArgumentValidationError.ArgumentIsNull);
-            return Either<ArgumentValidationError, AspNetCoreHttpMessageHandler>.Create(
+                    Either<ArgumentNullException, AspNetCoreHttpMessageHandler>.Create(
+                        new ArgumentNullException(nameof(middleware)));
+            return Either<ArgumentNullException, AspNetCoreHttpMessageHandler>.Create(
                 new AspNetCoreHttpMessageHandler(middleware));
         }
 

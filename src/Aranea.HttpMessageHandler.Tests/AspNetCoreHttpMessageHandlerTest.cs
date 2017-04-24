@@ -325,7 +325,7 @@ namespace Aranea.HttpMessageHandler.Tests
         {
             var maybeAHandler = AspNetCoreHttpMessageHandler.Create((RequestDelegate) null);
 
-            maybeAHandler.Match(error => Assert.Equal(ArgumentValidationError.ArgumentIsNull, error));
+            maybeAHandler.Match(error => Assert.Equal(new ArgumentNullException($"requestDelegate").ParamName, error.ParamName));
         }
 
         [Fact(DisplayName = "When the middleware factory argument is null, the correct validation error is returned")]
@@ -333,7 +333,7 @@ namespace Aranea.HttpMessageHandler.Tests
         {
             var maybeAHandler = AspNetCoreHttpMessageHandler.Create((Middleware) null);
 
-            maybeAHandler.Match(error => Assert.Equal(ArgumentValidationError.ArgumentIsNull, error));
+            maybeAHandler.Match(error => Assert.Equal(new ArgumentNullException($"middleware").ParamName, error.ParamName));
         }
 
         [Fact(DisplayName = "When changing the use of cookies after disposal of the handler, it is not allowed")]
