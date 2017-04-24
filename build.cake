@@ -60,12 +60,12 @@ Task("RunTests")
         DotNetCoreTest("./src/Aranea.HttpMessageHandler.Tests/Aranea.HttpMessageHandler.Tests.csproj", settings);
 });
 
-Task("CopyPackages")
+Task("MovePackages")
     .IsDependentOn("Build")
     .Does(() =>
 {
     var files = GetFiles("./src/**/*.nupkg");
-    CopyFiles(files, "./artifacts");
+    MoveFiles(files, "./artifacts");
 
 });
 
