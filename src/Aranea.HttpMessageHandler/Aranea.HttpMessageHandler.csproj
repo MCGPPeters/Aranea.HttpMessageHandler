@@ -16,7 +16,7 @@
 
   <ItemGroup>
     <PackageReference Include="Aranea" Version="0.1.0-unstable0020" />
-    <PackageReference Include="Eru" Version="2.0.0-unstable0059" />
+    <PackageReference Include="Eru" Version="2.0.0-unstable0069" />
     <PackageReference Include="Microsoft.AspNetCore.Http" Version="1.1.1" />
     <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="1.1.1" />
     <PackageReference Include="System.Runtime.Serialization.Primitives" Version="4.3.0" />

@@ -1,3 +1,5 @@
+using Eru;
+
 namespace Aranea.HttpMessageHandler.Tests
 {
     using System;
@@ -10,9 +12,9 @@ namespace Aranea.HttpMessageHandler.Tests
     using System.Threading.Tasks;
     using Microsoft.AspNetCore.Http;
     using Xunit;
-    using Aranea.HttpMessageHandler;
+    using HttpMessageHandler;
 
-    public class HttpMessageHandlerTest
+    public class HttpMessageHandlerTests
     {
         [Theory(DisplayName = "When sending a request to an endpoint, an expected result should be returned")]
         [InlineData("foo")]
@@ -28,17 +30,14 @@ namespace Aranea.HttpMessageHandler.Tests
                         context.Response.StatusCode = 200;
 
                     return Task.FromResult((object) null);
-                })
-                .Match(
-                    error => null,
-                    handler => new HttpClient(handler));
+                }).Match((handler, exceptions) => new HttpClient(handler), error => null);
 
             var responseMessage = httpClient.GetAsync($"http://sample.com/{requestPath}").Result;
 
             Assert.Equal(HttpStatusCode.OK, responseMessage.StatusCode);
         }
 
-        [Theory( DisplayName = "Form data should be handled properly")]
+        [Theory(DisplayName = "Form data should be handled properly")]
         [InlineData("Maurice")]
         [InlineData("Damian")]
         [InlineData("Who")]
@@ -54,9 +53,7 @@ namespace Aranea.HttpMessageHandler.Tests
                         await context.Response.WriteAsync("Hello " + form["Name"]);
                     }
                 })
-                .Match(
-                    error => null,
-                    handler => new HttpClient(handler));
+                .Match((handler, message) => new HttpClient(handler), errors => null);
 
             var response = httpClient.PostAsync("http://sample.com/greeting",
                     new FormUrlEncodedContent(new List<KeyValuePair<string, string>>
@@ -69,7 +66,7 @@ namespace Aranea.HttpMessageHandler.Tests
         }
 
         [Theory(DisplayName =
-                "The http context should contain the Content-Length header when the content isn't empty and it's value should be correct"
+            "The http context should contain the Content-Length header when the content isn't empty and it's value should be correct"
         )]
         [InlineData("Hello")]
         [InlineData("world")]
@@ -83,9 +80,8 @@ namespace Aranea.HttpMessageHandler.Tests
                 httpContext = context;
                 return Task.FromResult(0);
             });
-            var httpMessageHandler = maybeAHandler.Match(
-                error => null,
-                handler => handler);
+            var httpMessageHandler = maybeAHandler.Match((handler, message) => handler, errors => null);
+
 
             using (var httpClient = new HttpClient(httpMessageHandler))
             {
@@ -266,9 +262,7 @@ namespace Aranea.HttpMessageHandler.Tests
         {
             var maybeAHandler = AspNetCoreHttpMessageHandler.Create(_requestDelegateForTestingRedirects);
 
-            var httpMessageHandler = maybeAHandler.Match(
-                error => null,
-                handler => handler);
+            var httpMessageHandler = maybeAHandler.Match((handler, message) => handler, errors => null);
 
             httpMessageHandler.AllowAutoRedirect = true;
             return httpMessageHandler;
@@ -305,9 +299,7 @@ namespace Aranea.HttpMessageHandler.Tests
             };
 
             var maybeAHandler = AspNetCoreHttpMessageHandler.Create(requestDelegate);
-            var httpMessageHandler = maybeAHandler.Match(
-                error => null,
-                handler => handler);
+            var httpMessageHandler = maybeAHandler.Match((handler, message) => handler, errors => null);
 
             httpMessageHandler.UseCookies(true);
 
@@ -325,7 +317,12 @@ namespace Aranea.HttpMessageHandler.Tests
         {
             var maybeAHandler = AspNetCoreHttpMessageHandler.Create((RequestDelegate) null);
 
-            maybeAHandler.Match(error => Assert.Equal(new ArgumentNullException($"requestDelegate").ParamName, error.ParamName));
+            maybeAHandler.MatchFailure(error =>
+            {
+                Assert.Equal(new ArgumentNullException($"requestDelegate").ParamName,
+error.First().ParamName);
+                return Unit.Instance;
+            });
         }
 
         [Fact(DisplayName = "When the middleware factory argument is null, the correct validation error is returned")]
@@ -333,35 +330,38 @@ namespace Aranea.HttpMessageHandler.Tests
         {
             var maybeAHandler = AspNetCoreHttpMessageHandler.Create((Middleware) null);
 
-            maybeAHandler.Match(error => Assert.Equal(new ArgumentNullException($"middleware").ParamName, error.ParamName));
+            maybeAHandler.MatchFailure(error =>
+            {
+                Assert.Equal(new ArgumentNullException($"middleware").ParamName,
+error.First().ParamName);
+                return Unit.Instance;
+            });
         }
 
-        [Fact(DisplayName = "When changing the use of cookies after disposal of the handler, it is not allowed")]
+        [Fact(DisplayName = "When changing the use of cookies after initial operation, it is not allowed")]
         public async Task Test12()
         {
             var maybeAHandler = AspNetCoreHttpMessageHandler.Create(_ => Task.FromResult(0));
-            var httpMessageHandler = maybeAHandler.Match(
-                error => null,
-                handler => handler);
+            var httpMessageHandler = maybeAHandler.Match((handler, message) => handler, errors => null);
 
             using (var httpClient = new HttpClient(httpMessageHandler))
             {
                 await httpClient.GetAsync("http://localhost/");
                 httpMessageHandler
                     .UseCookies(true)
-                    .Match(
-                        error =>
-                            Assert.Equal(InvalidOperation.NotPermittedToChangeCookieUsageAfterInitialOperation, error));
+                .MatchFailure(error =>
+                {
+                    Assert.Equal("It is not permitted to change cookie usage after initial operation", error.First().Message);
+                    return Unit.Instance;
+                });
             }
         }
 
-        [Fact(DisplayName = "When changing the use of cookies after an disposal, it is not allowed")]
+        [Fact(DisplayName = "When changing the use of cookies after disposal of the handler, it is not allowed")]
         public async Task Test13()
         {
             var maybeAHandler = AspNetCoreHttpMessageHandler.Create(_ => Task.FromResult(0));
-            var httpMessageHandler = maybeAHandler.Match(
-                error => null,
-                handler => handler);
+            var httpMessageHandler = maybeAHandler.Match((handler, message) => handler, errors => null);
 
             using (var httpClient = new HttpClient(httpMessageHandler))
             {
@@ -370,7 +370,11 @@ namespace Aranea.HttpMessageHandler.Tests
 
             httpMessageHandler
                 .UseCookies(true)
-                .Match(error => Assert.Equal(InvalidOperation.NotPermittedToChangeCookieUsageAfterDisposing, error));
+            .MatchFailure(error =>
+             {
+                 Assert.Equal("It is not permitted to change cookie usage after disposing", error.First().Message);
+                 return Unit.Instance;
+             });
         }
 
         [Fact(
@@ -416,9 +420,7 @@ namespace Aranea.HttpMessageHandler.Tests
                 return Task.FromResult(0);
             });
 
-            var httpMessageHandler = maybeAHandler.Match(
-                error => null,
-                handler => handler);
+            var httpMessageHandler = maybeAHandler.Match((handler, message) => handler, errors => null);
 
             httpMessageHandler.UseCookies(true);
 
@@ -472,9 +474,7 @@ namespace Aranea.HttpMessageHandler.Tests
             }
 
             var maybeAHandler = AspNetCoreHttpMessageHandler.Create(RequestDelegate);
-            var httpMessageHandler = maybeAHandler.Match(
-                error => null,
-                handler => handler);
+            var httpMessageHandler = maybeAHandler.Match((handler, message) => handler, errors => null);
 
             httpMessageHandler.UseCookies(true);
 

@@ -1,4 +1,7 @@
-﻿namespace Aranea.HttpMessageHandler
+﻿using System.Reflection.Metadata.Ecma335;
+using Eru.Validation;
+
+namespace Aranea.HttpMessageHandler
 {
     using System;
     using System.IO;
@@ -9,12 +12,21 @@
     using Microsoft.AspNetCore.Http;
     using Eru;
 
+    public static class ObjectProperties
+    {
+        public static Predicate<T> NotNull<T>()
+        {
+            return t => t != null;
+        }
+    }
+
     public class AspNetCoreHttpMessageHandler : HttpMessageHandler
     {
         private readonly RequestDelegate _application;
         private bool _disposed;
         private bool _operationStarted;
         private bool _useCookies;
+        private static Predicate<bool> False => _ => _ == false;
 
         private AspNetCoreHttpMessageHandler(RequestDelegate application)
         {
@@ -38,40 +50,35 @@
         public bool AllowAutoRedirect { get; set; }
         public CookieContainer CookieContainer { get; } = new CookieContainer();
 
-        public Either<InvalidOperation, Unit> UseCookies(bool useCookies)
+        public Either<Unit, InvalidOperationException> UseCookies(bool useCookies)
         {
-            if (_disposed)
-                return
-                    Either<InvalidOperation, Unit>.Create(
-                        InvalidOperation.NotPermittedToChangeCookieUsageAfterDisposing);
-            if (_operationStarted)
-                return
-                    Either<InvalidOperation, Unit>.Create(
-                        InvalidOperation.NotPermittedToChangeCookieUsageAfterInitialOperation);
-            _useCookies = useCookies;
-            return Either<InvalidOperation, Unit>.Create(Unit.Instance);
+            return _disposed
+                .Check("It is not permitted to change cookie usage after disposing", False)
+                .Bind(_ => _operationStarted.Check("It is not permitted to change cookie usage after initial operation", False))
+                .Map(_ =>
+                {
+                    _useCookies = useCookies;
+                    return Unit.Instance;
+                })
+                .MapMessages(message => new InvalidOperationException(message));
         }
 
 
-        public static Either<ArgumentNullException, AspNetCoreHttpMessageHandler> Create(
+        public static Either<AspNetCoreHttpMessageHandler, ArgumentNullException> Create(
             RequestDelegate requestDelegate)
         {
-            if (requestDelegate == null)
-                return
-                    Either<ArgumentNullException, AspNetCoreHttpMessageHandler>.Create(
-                        new ArgumentNullException(nameof(requestDelegate)));
-            return Either<ArgumentNullException, AspNetCoreHttpMessageHandler>.Create(
-                new AspNetCoreHttpMessageHandler(requestDelegate));
+            return requestDelegate
+                .Check(nameof(requestDelegate), rd => rd != null)
+                .Map(rd => new AspNetCoreHttpMessageHandler(rd))
+                .MapMessages(s => new ArgumentNullException(s));
         }
 
-        public static Either<ArgumentNullException, AspNetCoreHttpMessageHandler> Create(Middleware middleware)
+        public static Either<AspNetCoreHttpMessageHandler, ArgumentNullException> Create(Middleware middleware)
         {
-            if (middleware == null)
-                return
-                    Either<ArgumentNullException, AspNetCoreHttpMessageHandler>.Create(
-                        new ArgumentNullException(nameof(middleware)));
-            return Either<ArgumentNullException, AspNetCoreHttpMessageHandler>.Create(
-                new AspNetCoreHttpMessageHandler(middleware));
+            return middleware
+                .Check(nameof(middleware), mw => mw != null)
+                .Map(mw => new AspNetCoreHttpMessageHandler(mw))
+                .MapMessages(s => new ArgumentNullException(s));
         }
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
