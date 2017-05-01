@@ -70,7 +70,7 @@ Task("MovePackages")
 });
 
 Task("NuGetPublish")
-    .IsDependentOn("CopyPackages")
+    .IsDependentOn("MovePackages")
     .Does(() =>
     {
          
