@@ -1,84 +1,55 @@
-﻿using System.Reflection.Metadata.Ecma335;
-using Eru.Validation;
+﻿using System;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+using Eru;
+using Microsoft.AspNetCore.Http;
 
 namespace Aranea.HttpMessageHandler
 {
-    using System;
-    using System.IO;
-    using System.Net;
-    using System.Net.Http;
-    using System.Threading;
-    using System.Threading.Tasks;
-    using Microsoft.AspNetCore.Http;
-    using Eru;
-
-    public static class ObjectProperties
-    {
-        public static Predicate<T> NotNull<T>()
-        {
-            return t => t != null;
-        }
-    }
-
-    public class AspNetCoreHttpMessageHandler : HttpMessageHandler
+    public class AspNetCoreHttpMessageHandler : System.Net.Http.HttpMessageHandler
     {
         private readonly RequestDelegate _application;
         private bool _disposed;
         private bool _operationStarted;
         private bool _useCookies;
-        private static Predicate<bool> False => _ => _ == false;
 
-        private AspNetCoreHttpMessageHandler(RequestDelegate application)
-        {
-            _application = application;
-        }
+        public AspNetCoreHttpMessageHandler(RequestDelegate application) => _application =
+            application ?? throw new ArgumentNullException(nameof(application));
 
         /// <summary>
         /// </summary>
         /// <param name="middleware">A middleware function that will terminate with 404 response</param>
-        private AspNetCoreHttpMessageHandler(Middleware middleware)
-        {
-            _application = middleware(context =>
+        public AspNetCoreHttpMessageHandler(Middleware middleware) =>
+            _application = middleware?.Invoke(context =>
             {
                 context.Response.StatusCode = 404;
                 return Task.FromResult(0);
-            });
-        }
+            }) ?? throw new ArgumentNullException(nameof(middleware));
 
-        public int AutoRedirectLimit { get; set; } = 20;
+        private static Predicate<bool> False => _ => _ == false;
 
-        public bool AllowAutoRedirect { get; set; }
+        public int AutoRedirectLimit { private get; set; } = 20;
+
+        public bool AllowAutoRedirect { private get; set; }
         public CookieContainer CookieContainer { get; } = new CookieContainer();
 
         public Either<Unit, InvalidOperationException> UseCookies(bool useCookies)
         {
             return _disposed
-                .Check("It is not permitted to change cookie usage after disposing", False)
-                .Bind(_ => _operationStarted.Check("It is not permitted to change cookie usage after initial operation", False))
+                .Check(False, "It is not permitted to change cookie usage after disposing")
+                .Bind(_ => _operationStarted.Check(False,
+                    "It is not permitted to change cookie usage after initial operation"))
                 .Map(_ =>
                 {
                     _useCookies = useCookies;
                     return Unit.Instance;
                 })
-                .MapMessages(message => new InvalidOperationException(message));
-        }
-
-
-        public static Either<AspNetCoreHttpMessageHandler, ArgumentNullException> Create(
-            RequestDelegate requestDelegate)
-        {
-            return requestDelegate
-                .Check(nameof(requestDelegate), rd => rd != null)
-                .Map(rd => new AspNetCoreHttpMessageHandler(rd))
-                .MapMessages(s => new ArgumentNullException(s));
-        }
-
-        public static Either<AspNetCoreHttpMessageHandler, ArgumentNullException> Create(Middleware middleware)
-        {
-            return middleware
-                .Check(nameof(middleware), mw => mw != null)
-                .Map(mw => new AspNetCoreHttpMessageHandler(mw))
-                .MapMessages(s => new ArgumentNullException(s));
+                .MapOtherwise(
+                    error => new InvalidOperationException(error.Messages.Aggregate((s, s1) => s + " " + s1)));
         }
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
@@ -102,7 +73,9 @@ namespace Aranea.HttpMessageHandler
                         Detail = $"The number of details exceeded the maximum allowed number of {AutoRedirectLimit}",
                         Title = "Too many redirects"
                     };
-                    response.Content = new StringContent(SimpleJson.SerializeObject(httpProblemDetails, new CamelCasingSerializerStrategy()));
+                    response.Content =
+                        new StringContent(SimpleJson.SerializeObject(httpProblemDetails,
+                            new CamelCasingSerializerStrategy()));
                     response.Content.Headers.ContentType = HttpProblemDetails.MediaTypeWithQualityHeaderValue;
                     return response;
                 }
@@ -125,15 +98,11 @@ namespace Aranea.HttpMessageHandler
             return response;
         }
 
-        private static bool IsRedirectToGet(int code)
-        {
-            return code == 301 || code == 302 || code == 303;
-        }
+        private static bool IsRedirectToGet(int code) => code == 301 || code == 302 || code == 303;
 
-        private static bool IsBodylessRequest(HttpRequestMessage req)
-        {
-            return req.Method == HttpMethod.Get || req.Method == HttpMethod.Head || req.Method == HttpMethod.Delete;
-        }
+        private static bool IsBodylessRequest(HttpRequestMessage req) => req.Method == HttpMethod.Get ||
+                                                                         req.Method == HttpMethod.Head || req.Method ==
+                                                                         HttpMethod.Delete;
 
         private async Task<HttpResponseMessage> SendAsyncCore(HttpRequestMessage request,
             CancellationToken cancellationToken)
@@ -186,11 +155,10 @@ namespace Aranea.HttpMessageHandler
 
         private void CheckSetCookie(HttpRequestMessage request, HttpResponseMessage response)
         {
-            if (_useCookies && response.Headers.Contains("Set-Cookie"))
-            {
-                var cookieHeader = string.Join(",", response.Headers.GetValues("Set-Cookie"));
-                CookieContainer.SetCookies(request.RequestUri, cookieHeader);
-            }
+            if (!_useCookies || !response.Headers.Contains("Set-Cookie")) return;
+
+            var cookieHeader = string.Join(",", response.Headers.GetValues("Set-Cookie"));
+            CookieContainer.SetCookies(request.RequestUri, cookieHeader);
         }
     }
 }

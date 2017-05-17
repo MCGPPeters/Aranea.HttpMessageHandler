@@ -1,5 +1,3 @@
-using Eru;
-
 namespace Aranea.HttpMessageHandler.Tests
 {
     using System;
@@ -13,6 +11,7 @@ namespace Aranea.HttpMessageHandler.Tests
     using Microsoft.AspNetCore.Http;
     using Xunit;
     using HttpMessageHandler;
+    using Eru;
 
     public class HttpMessageHandlerTests
     {
@@ -23,16 +22,16 @@ namespace Aranea.HttpMessageHandler.Tests
         [InlineData("what")]
         public void Test1(string requestPath)
         {
-            var httpClient = AspNetCoreHttpMessageHandler
-                .Create(context =>
-                {
-                    if (context.Request.Path == $"/{requestPath}")
-                        context.Response.StatusCode = 200;
+            var httpMessageHandler = new AspNetCoreHttpMessageHandler(context =>
+            {
+                if (context.Request.Path == $"/{requestPath}")
+                    context.Response.StatusCode = 200;
 
-                    return Task.FromResult((object) null);
-                }).Match((handler, exceptions) => new HttpClient(handler), error => null);
+                return Task.FromResult((object) null);
+            });
 
-            var responseMessage = httpClient.GetAsync($"http://sample.com/{requestPath}").Result;
+            var responseMessage = new HttpClient(httpMessageHandler)
+                .Use(client => client.GetAsync($"http://sample.com/{requestPath}").Result);
 
             Assert.Equal(HttpStatusCode.OK, responseMessage.StatusCode);
         }
@@ -44,25 +43,25 @@ namespace Aranea.HttpMessageHandler.Tests
         [InlineData("Else")]
         public void Test2(string targetOfGreeting)
         {
-            var httpClient = AspNetCoreHttpMessageHandler
-                .Create(async context =>
+            var httpMessageHandler = new AspNetCoreHttpMessageHandler
+                (async context =>
                 {
                     if (context.Request.Path == "/greeting")
                     {
                         var form = context.Request.ReadFormAsync().Result;
                         await context.Response.WriteAsync("Hello " + form["Name"]);
                     }
-                })
-                .Match((handler, message) => new HttpClient(handler), errors => null);
+                });
 
-            var response = httpClient.PostAsync("http://sample.com/greeting",
-                    new FormUrlEncodedContent(new List<KeyValuePair<string, string>>
+            var responseMessage = new HttpClient(httpMessageHandler)
+                .Use(client => 
+                    client.PostAsync("http://sample.com/greeting", new FormUrlEncodedContent(new List<KeyValuePair<string, string>>
                     {
                         new KeyValuePair<string, string>("Name", targetOfGreeting)
                     }))
-                .Result;
+                .Result);
 
-            Assert.Equal(response.Content.ReadAsStringAsync().Result, $"Hello {targetOfGreeting}");
+            Assert.Equal(responseMessage.Content.ReadAsStringAsync().Result, $"Hello {targetOfGreeting}");
         }
 
         [Theory(DisplayName =
@@ -75,19 +74,18 @@ namespace Aranea.HttpMessageHandler.Tests
         public void Test3(string content)
         {
             HttpContext httpContext = null;
-            var maybeAHandler = AspNetCoreHttpMessageHandler.Create(context =>
+            var httpMessageHandler = new AspNetCoreHttpMessageHandler(context =>
             {
                 httpContext = context;
                 return Task.FromResult(0);
             });
-            var httpMessageHandler = maybeAHandler.Match((handler, message) => handler, errors => null);
 
-
-            using (var httpClient = new HttpClient(httpMessageHandler))
-            {
-                var stringContent = new StringContent(content);
-                httpClient.PostAsync("http://localhost/", stringContent).Wait();
-            }
+            new HttpClient(httpMessageHandler)
+                .Use(client =>
+                {
+                    var stringContent = new StringContent(content);
+                    client.PostAsync("http://localhost/", stringContent).Wait();
+                });
 
             Assert.True(httpContext.Request.Headers.ContainsKey("Content-Length"));
             Assert.Equal(httpContext.Request.ContentLength, content.Length);
@@ -260,11 +258,11 @@ namespace Aranea.HttpMessageHandler.Tests
 
         private AspNetCoreHttpMessageHandler CreateAspNetCoreHttpMessageHandlerForRedirectTesting()
         {
-            var maybeAHandler = AspNetCoreHttpMessageHandler.Create(_requestDelegateForTestingRedirects);
+            var httpMessageHandler = new AspNetCoreHttpMessageHandler(_requestDelegateForTestingRedirects)
+            {
+                AllowAutoRedirect = true
+            };
 
-            var httpMessageHandler = maybeAHandler.Match((handler, message) => handler, errors => null);
-
-            httpMessageHandler.AllowAutoRedirect = true;
             return httpMessageHandler;
         }
 
@@ -298,9 +296,7 @@ namespace Aranea.HttpMessageHandler.Tests
                 await tcs.Task;
             };
 
-            var maybeAHandler = AspNetCoreHttpMessageHandler.Create(requestDelegate);
-            var httpMessageHandler = maybeAHandler.Match((handler, message) => handler, errors => null);
-
+            var httpMessageHandler = new AspNetCoreHttpMessageHandler(requestDelegate);
             httpMessageHandler.UseCookies(true);
 
             var httpClient = new HttpClient(httpMessageHandler);
@@ -311,57 +307,29 @@ namespace Aranea.HttpMessageHandler.Tests
             tcs.SetResult(0);
         }
 
-
-        [Fact(DisplayName = "When the application factory argument is null, the correct validation error is returned")]
-        public void Test10()
-        {
-            var maybeAHandler = AspNetCoreHttpMessageHandler.Create((RequestDelegate) null);
-
-            maybeAHandler.MatchFailure(error =>
-            {
-                Assert.Equal(new ArgumentNullException($"requestDelegate").ParamName,
-error.First().ParamName);
-                return Unit.Instance;
-            });
-        }
-
-        [Fact(DisplayName = "When the middleware factory argument is null, the correct validation error is returned")]
-        public void Test11()
-        {
-            var maybeAHandler = AspNetCoreHttpMessageHandler.Create((Middleware) null);
-
-            maybeAHandler.MatchFailure(error =>
-            {
-                Assert.Equal(new ArgumentNullException($"middleware").ParamName,
-error.First().ParamName);
-                return Unit.Instance;
-            });
-        }
-
         [Fact(DisplayName = "When changing the use of cookies after initial operation, it is not allowed")]
         public async Task Test12()
         {
-            var maybeAHandler = AspNetCoreHttpMessageHandler.Create(_ => Task.FromResult(0));
-            var httpMessageHandler = maybeAHandler.Match((handler, message) => handler, errors => null);
-
-            using (var httpClient = new HttpClient(httpMessageHandler))
-            {
-                await httpClient.GetAsync("http://localhost/");
-                httpMessageHandler
-                    .UseCookies(true)
-                .MatchFailure(error =>
+            var httpMessageHandler = new AspNetCoreHttpMessageHandler(_ => Task.FromResult(0));
+            await new HttpClient(httpMessageHandler)
+                .Use(async client =>
                 {
-                    Assert.Equal("It is not permitted to change cookie usage after initial operation", error.First().Message);
-                    return Unit.Instance;
+                    await client.GetAsync("http://localhost/");
+                    httpMessageHandler
+                        .UseCookies(true)
+                        .Otherwise(error =>
+                        {
+                            Assert.Equal("It is not permitted to change cookie usage after initial operation",
+                                error.Message);
+                            return Unit.Instance;
+                        });
                 });
-            }
         }
 
         [Fact(DisplayName = "When changing the use of cookies after disposal of the handler, it is not allowed")]
         public async Task Test13()
         {
-            var maybeAHandler = AspNetCoreHttpMessageHandler.Create(_ => Task.FromResult(0));
-            var httpMessageHandler = maybeAHandler.Match((handler, message) => handler, errors => null);
+            var httpMessageHandler = new AspNetCoreHttpMessageHandler(_ => Task.FromResult(0));
 
             using (var httpClient = new HttpClient(httpMessageHandler))
             {
@@ -370,42 +338,43 @@ error.First().ParamName);
 
             httpMessageHandler
                 .UseCookies(true)
-            .MatchFailure(error =>
-             {
-                 Assert.Equal("It is not permitted to change cookie usage after disposing", error.First().Message);
-                 return Unit.Instance;
-             });
+                .Otherwise(error =>
+                 {
+                     Assert.Equal("It is not permitted to change cookie usage after disposing", error.Message);
+                     return Unit.Instance;
+                 });
         }
 
         [Fact(
             DisplayName =
                 "When caught in a redirect loop, the maximum allowed number of redirects should not be exceeded")]
-        public async Task Test14()
+        public void Test14()
         {
             var httpMessageHandler = CreateAspNetCoreHttpMessageHandlerForRedirectTesting();
             const int maximumNumberOfRedirects = 20;
             httpMessageHandler.AutoRedirectLimit = maximumNumberOfRedirects;
 
-            using (var client = new HttpClient(httpMessageHandler)
-            {
-                BaseAddress = new Uri("http://localhost")
-            })
-            {
-                var response = await client.GetAsync("/redirect-loop");
-                var body = await response.Content.ReadAsStringAsync();
-                var actualProblemDetails = SimpleJson.DeserializeObject<HttpProblemDetails>(body,
-                    new CamelCasingSerializerStrategy());
-                var expectedHttpProblemDetails = new HttpProblemDetails
+            new HttpClient(httpMessageHandler)
+                .Use(async client =>
                 {
-                    Detail = $"The number of details exceeded the maximum allowed number of {maximumNumberOfRedirects}",
-                    Status = 500,
-                    Title = "Too many redirects"
-                };
+                    client.BaseAddress = new Uri("http://localhost");
 
-                Assert.Equal(expectedHttpProblemDetails, actualProblemDetails,
-                    new HttpProblemDetailsEqualityComparer());
-                Assert.Equal("application/problem+json", response.Content.Headers.ContentType.MediaType);
-            }
+                    var response = await client.GetAsync("/redirect-loop");
+                    var body = await response.Content.ReadAsStringAsync();
+                    var actualProblemDetails = SimpleJson.DeserializeObject<HttpProblemDetails>(body,
+                        new CamelCasingSerializerStrategy());
+                    var expectedHttpProblemDetails = new HttpProblemDetails
+                    {
+                        Detail =
+                            $"The number of details exceeded the maximum allowed number of {maximumNumberOfRedirects}",
+                        Status = 500,
+                        Title = "Too many redirects"
+                    };
+
+                    Assert.Equal(expectedHttpProblemDetails, actualProblemDetails,
+                        new HttpProblemDetailsEqualityComparer());
+                    Assert.Equal("application/problem+json", response.Content.Headers.ContentType.MediaType);
+                });
         }
 
         [Fact(DisplayName = "Cookies that are set on the server should be in the cookie container")]
@@ -413,14 +382,12 @@ error.First().ParamName);
         {
             const string cookieName1 = "testcookie1";
             const string cookieName2 = "testcookie2";
-            var maybeAHandler = AspNetCoreHttpMessageHandler.Create(context =>
+            var httpMessageHandler = new AspNetCoreHttpMessageHandler(context =>
             {
                 context.Response.Cookies.Append(cookieName1, "c1");
                 context.Response.Cookies.Append(cookieName2, "c2");
                 return Task.FromResult(0);
             });
-
-            var httpMessageHandler = maybeAHandler.Match((handler, message) => handler, errors => null);
 
             httpMessageHandler.UseCookies(true);
 
@@ -451,7 +418,7 @@ error.First().ParamName);
         }
 
         [Fact(DisplayName = "When the headers are going to be sent, the cookie should be in the container")]
-        public async Task Test17()
+        public void Test17()
         {
             const string cookieName1 = "testcookie1";
 
@@ -473,20 +440,21 @@ error.First().ParamName);
                 await Inner(context);
             }
 
-            var maybeAHandler = AspNetCoreHttpMessageHandler.Create(RequestDelegate);
-            var httpMessageHandler = maybeAHandler.Match((handler, message) => handler, errors => null);
+            var httpMessageHandler = new AspNetCoreHttpMessageHandler(RequestDelegate);
 
             httpMessageHandler.UseCookies(true);
 
-            using (var client = new HttpClient(httpMessageHandler))
-            {
-                await client.GetAsync(uri);
-            }
+            var response = new HttpClient(httpMessageHandler)
+                .Use(async client =>
+                {
+                    await client.GetAsync(uri);
+                    Assert.NotNull(httpMessageHandler
+                        .CookieContainer
+                        .GetCookies(uri)[cookieName1]
+                        .Value);
+                });
 
-            Assert.NotNull(httpMessageHandler
-                .CookieContainer
-                .GetCookies(uri)[cookieName1]
-                .Value);
+           
         }
 
         [Fact(DisplayName = "Authorization header is removed on redirect")]
@@ -494,53 +462,47 @@ error.First().ParamName);
         {
             var httpMessageHandler = CreateAspNetCoreHttpMessageHandlerForRedirectTesting();
 
-            using (var client = new HttpClient(httpMessageHandler)
+            var responseMessage = await new HttpClient(httpMessageHandler).Use(async client =>
             {
-                BaseAddress = new Uri("http://localhost")
-            })
-            {
+                client.BaseAddress = new Uri("http://localhost");
                 client.DefaultRequestHeaders.Authorization = AuthenticationHeaderValue.Parse("foo");
-                var response = await client.GetAsync("/redirect-301-absolute");
+                return await client.GetAsync("/redirect-301-absolute");
+            });
 
-                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-                Assert.Equal(null, response.RequestMessage.Headers.Authorization);
-            }
+            Assert.Equal(HttpStatusCode.OK, responseMessage.StatusCode);
+            Assert.Equal(null, responseMessage.RequestMessage.Headers.Authorization);
         }
 
         [Fact(DisplayName = "Redirect does not take place on POST and 307")]
-        public async Task Test8()
+        public void Test8()
         {
             var httpMessageHandler = CreateAspNetCoreHttpMessageHandlerForRedirectTesting();
 
-            using (var client = new HttpClient(httpMessageHandler)
+            new HttpClient(httpMessageHandler).Use(async client =>
             {
-                BaseAddress = new Uri("http://localhost")
-            })
-            {
-                var response = await client.PostAsync("/redirect-307-absolute", new StringContent("the-body"));
-
-                Assert.Equal(HttpStatusCode.TemporaryRedirect, response.StatusCode);
-                Assert.Equal("http://localhost/redirect-307-absolute", response.RequestMessage.RequestUri.AbsoluteUri);
-            }
+                client.BaseAddress = new Uri("http://localhost");
+                var responseMessage = await  client.PostAsync("/redirect-307-absolute", new StringContent("the-body"));
+                Assert.Equal(HttpStatusCode.TemporaryRedirect, responseMessage.StatusCode);
+                Assert.Equal("http://localhost/redirect-307-absolute", responseMessage.RequestMessage.RequestUri.AbsoluteUri);
+            });
         }
 
         [Fact(DisplayName = "Redirect does not alter HTTP method")]
-        public async Task Test9()
+        public void Test9()
         {
             var httpMessageHandler = CreateAspNetCoreHttpMessageHandlerForRedirectTesting();
 
-            using (var client = new HttpClient(httpMessageHandler)
+            new HttpClient(httpMessageHandler).Use(async client =>
             {
-                BaseAddress = new Uri("http://localhost")
-            })
-            {
-                var response =
-                    await client.SendAsync(new HttpRequestMessage(HttpMethod.Head, "/redirect-307-absolute"));
+                client.BaseAddress = new Uri("http://localhost");
+                var responseMessage = await client.SendAsync(new HttpRequestMessage(HttpMethod.Head, "/redirect-307-absolute"));
+                Assert.Equal(HttpStatusCode.OK, responseMessage.StatusCode);
+                Assert.Equal("http://localhost/redirect", responseMessage.RequestMessage.RequestUri.AbsoluteUri);
+                Assert.Equal(HttpMethod.Head, responseMessage.RequestMessage.Method);
+            });
 
-                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-                Assert.Equal("http://localhost/redirect", response.RequestMessage.RequestUri.AbsoluteUri);
-                Assert.Equal(HttpMethod.Head, response.RequestMessage.Method);
-            }
+
+            
         }
     }
 }
