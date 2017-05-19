@@ -37,14 +37,22 @@ Task("Build")
     .IsDependentOn("RestorePackages")
     .Does(() =>
 {
-    var buildSettings = new DotNetCoreBuildSettings
-     {
-         Framework = "netcoreapp1.1",
-         Configuration = configuration,
-         ArgumentCustomization = args => args.Append("/p:SemVer=" + versionInfo.NuGetVersionV2)
-     };
+    // var buildSettings = new DotNetCoreBuildSettings
+    //  {
+    //      Framework = "netcoreapp1.1",
+    //      Configuration = configuration,
+    //      ArgumentCustomization = args => args.Append("/p:SemVer=" + versionInfo.NuGetVersionV2)
+    //  };
 
-    DotNetCoreBuild(solution, buildSettings);
+    // DotNetCoreBuild(solution, buildSettings);
+
+    MSBuild(solution, new MSBuildSettings 
+    {
+        Verbosity = Verbosity.Minimal,
+        ToolVersion = MSBuildToolVersion.VS2017,
+        Configuration = configuration,
+        ArgumentCustomization = args => args.Append("/p:SemVer=" + versionInfo.NuGetVersionV2)
+    });
 });
 
 
