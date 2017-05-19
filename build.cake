@@ -37,15 +37,6 @@ Task("Build")
     .IsDependentOn("RestorePackages")
     .Does(() =>
 {
-    // var buildSettings = new DotNetCoreBuildSettings
-    //  {
-    //      Framework = "netcoreapp1.1",
-    //      Configuration = configuration,
-    //      ArgumentCustomization = args => args.Append("/p:SemVer=" + versionInfo.NuGetVersionV2)
-    //  };
-
-    // DotNetCoreBuild(solution, buildSettings);
-
     MSBuild(solution, new MSBuildSettings 
     {
         Verbosity = Verbosity.Minimal,
@@ -68,13 +59,14 @@ Task("RunTests")
 });
 
 Task("MovePackages")
-    .IsDependentOn("Build")
+    .IsDependentOn("RunTests")
     .Does(() =>
 {
-    var files = GetFiles("./src/**/*.nupkg");
+    var files = GetFiles("./src/Aranea.HttpMessageHandler/**/*.nupkg");
     MoveFiles(files, "./artifacts");
-
+    DeleteFile("./artifacts/Aranea.HttpMessageHandler.1.0.0.nupkg");
 });
+
 
 Task("NuGetPublish")
     .IsDependentOn("MovePackages")
