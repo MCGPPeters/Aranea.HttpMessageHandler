@@ -2,12 +2,13 @@
 {
     using System;
     using System.IO;
+    using System.Linq;
     using System.Net;
     using System.Net.Http;
     using System.Threading;
     using System.Threading.Tasks;
-    using Microsoft.AspNetCore.Http;
     using Eru;
+    using Microsoft.AspNetCore.Http;
 
     public class AspNetCoreHttpMessageHandler : HttpMessageHandler
     {
@@ -16,62 +17,45 @@
         private bool _operationStarted;
         private bool _useCookies;
 
-        private AspNetCoreHttpMessageHandler(RequestDelegate application)
-        {
-            _application = application;
-        }
+        /// <summary>
+        /// Create a handler using a request delegate
+        /// </summary>
+        /// <param name="application"></param>
+        public AspNetCoreHttpMessageHandler(RequestDelegate application) => _application =
+            application ?? throw new ArgumentNullException(nameof(application));
 
         /// <summary>
+        /// Create a handler using a Middleware delegate
         /// </summary>
         /// <param name="middleware">A middleware function that will terminate with 404 response</param>
-        private AspNetCoreHttpMessageHandler(Middleware middleware)
-        {
-            _application = middleware(context =>
+        public AspNetCoreHttpMessageHandler(Middleware middleware) =>
+            _application = middleware?.Invoke(context =>
             {
                 context.Response.StatusCode = 404;
                 return Task.FromResult(0);
-            });
-        }
+            }) ?? throw new ArgumentNullException(nameof(middleware));
 
-        public int AutoRedirectLimit { get; set; } = 20;
+        private static Predicate<bool> False => _ => _ == false;
 
-        public bool AllowAutoRedirect { get; set; }
+        public int AutoRedirectLimit { private get; set; } = 20;
+
+        public bool AllowAutoRedirect { private get; set; }
+
         public CookieContainer CookieContainer { get; } = new CookieContainer();
 
-        public Either<InvalidOperation, Unit> UseCookies(bool useCookies)
+        public Either<Unit, InvalidOperationException> UseCookies(bool useCookies)
         {
-            if (_disposed)
-                return
-                    Either<InvalidOperation, Unit>.Create(
-                        InvalidOperation.NotPermittedToChangeCookieUsageAfterDisposing);
-            if (_operationStarted)
-                return
-                    Either<InvalidOperation, Unit>.Create(
-                        InvalidOperation.NotPermittedToChangeCookieUsageAfterInitialOperation);
-            _useCookies = useCookies;
-            return Either<InvalidOperation, Unit>.Create(Unit.Instance);
-        }
-
-
-        public static Either<ArgumentValidationError, AspNetCoreHttpMessageHandler> Create(
-            RequestDelegate requestDelegate)
-        {
-            if (requestDelegate == null)
-                return
-                    Either<ArgumentValidationError, AspNetCoreHttpMessageHandler>.Create(
-                        ArgumentValidationError.ArgumentIsNull);
-            return Either<ArgumentValidationError, AspNetCoreHttpMessageHandler>.Create(
-                new AspNetCoreHttpMessageHandler(requestDelegate));
-        }
-
-        public static Either<ArgumentValidationError, AspNetCoreHttpMessageHandler> Create(Middleware middleware)
-        {
-            if (middleware == null)
-                return
-                    Either<ArgumentValidationError, AspNetCoreHttpMessageHandler>.Create(
-                        ArgumentValidationError.ArgumentIsNull);
-            return Either<ArgumentValidationError, AspNetCoreHttpMessageHandler>.Create(
-                new AspNetCoreHttpMessageHandler(middleware));
+            return _disposed
+                .Check(False, "It is not permitted to change cookie usage after disposing")
+                .Bind(_ => _operationStarted.Check(False,
+                    "It is not permitted to change cookie usage after initial operation"))
+                .Map(_ =>
+                {
+                    _useCookies = useCookies;
+                    return Unit.Instance;
+                })
+                .MapOtherwise(
+                    error => new InvalidOperationException(error.Messages.Aggregate((s, s1) => s + " " + s1)));
         }
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
@@ -95,7 +79,9 @@
                         Detail = $"The number of details exceeded the maximum allowed number of {AutoRedirectLimit}",
                         Title = "Too many redirects"
                     };
-                    response.Content = new StringContent(SimpleJson.SerializeObject(httpProblemDetails, new CamelCasingSerializerStrategy()));
+                    response.Content =
+                        new StringContent(SimpleJson.SerializeObject(httpProblemDetails,
+                            new CamelCasingSerializerStrategy()));
                     response.Content.Headers.ContentType = HttpProblemDetails.MediaTypeWithQualityHeaderValue;
                     return response;
                 }
@@ -118,15 +104,11 @@
             return response;
         }
 
-        private static bool IsRedirectToGet(int code)
-        {
-            return code == 301 || code == 302 || code == 303;
-        }
+        private static bool IsRedirectToGet(int code) => code == 301 || code == 302 || code == 303;
 
-        private static bool IsBodylessRequest(HttpRequestMessage req)
-        {
-            return req.Method == HttpMethod.Get || req.Method == HttpMethod.Head || req.Method == HttpMethod.Delete;
-        }
+        private static bool IsBodylessRequest(HttpRequestMessage req) => req.Method == HttpMethod.Get ||
+                                                                         req.Method == HttpMethod.Head || req.Method ==
+                                                                         HttpMethod.Delete;
 
         private async Task<HttpResponseMessage> SendAsyncCore(HttpRequestMessage request,
             CancellationToken cancellationToken)
@@ -179,11 +161,10 @@
 
         private void CheckSetCookie(HttpRequestMessage request, HttpResponseMessage response)
         {
-            if (_useCookies && response.Headers.Contains("Set-Cookie"))
-            {
-                var cookieHeader = string.Join(",", response.Headers.GetValues("Set-Cookie"));
-                CookieContainer.SetCookies(request.RequestUri, cookieHeader);
-            }
+            if (!_useCookies || !response.Headers.Contains("Set-Cookie")) return;
+
+            var cookieHeader = string.Join(",", response.Headers.GetValues("Set-Cookie"));
+            CookieContainer.SetCookies(request.RequestUri, cookieHeader);
         }
     }
 }

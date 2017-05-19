@@ -30,7 +30,6 @@ Task("RestorePackages")
     .IsDependentOn("SetVersionInfo")
     .Does(() =>
 {
-    NuGetRestore(solution);
     DotNetCoreRestore(solution);
 });
 
@@ -38,14 +37,13 @@ Task("Build")
     .IsDependentOn("RestorePackages")
     .Does(() =>
 {
-    var buildSettings = new DotNetCoreBuildSettings
-     {
-         Framework = "netcoreapp1.1",
-         Configuration = configuration,
-         ArgumentCustomization = args => args.Append("/p:SemVer=" + versionInfo.NuGetVersionV2)
-     };
-
-    DotNetCoreBuild(solution, buildSettings);
+    MSBuild(solution, new MSBuildSettings 
+    {
+        Verbosity = Verbosity.Minimal,
+        ToolVersion = MSBuildToolVersion.VS2017,
+        Configuration = configuration,
+        ArgumentCustomization = args => args.Append("/p:SemVer=" + versionInfo.NuGetVersionV2)
+    });
 });
 
 
@@ -60,17 +58,18 @@ Task("RunTests")
         DotNetCoreTest("./src/Aranea.HttpMessageHandler.Tests/Aranea.HttpMessageHandler.Tests.csproj", settings);
 });
 
-Task("CopyPackages")
-    .IsDependentOn("Build")
+Task("MovePackages")
+    .IsDependentOn("RunTests")
     .Does(() =>
 {
-    var files = GetFiles("./src/**/*.nupkg");
-    CopyFiles(files, "./artifacts");
-
+    var files = GetFiles("./src/Aranea.HttpMessageHandler/**/*.nupkg");
+    MoveFiles(files, "./artifacts");
+    DeleteFile("./artifacts/Aranea.HttpMessageHandler.1.0.0.nupkg");
 });
 
+
 Task("NuGetPublish")
-    .IsDependentOn("CopyPackages")
+    .IsDependentOn("MovePackages")
     .Does(() =>
     {
          
