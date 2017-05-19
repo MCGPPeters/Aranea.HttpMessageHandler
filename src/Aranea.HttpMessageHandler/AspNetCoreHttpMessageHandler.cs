@@ -1,26 +1,31 @@
-﻿using System;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
-using Eru;
-using Microsoft.AspNetCore.Http;
-
-namespace Aranea.HttpMessageHandler
+﻿namespace Aranea.HttpMessageHandler
 {
-    public class AspNetCoreHttpMessageHandler : System.Net.Http.HttpMessageHandler
+    using System;
+    using System.IO;
+    using System.Linq;
+    using System.Net;
+    using System.Net.Http;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using Eru;
+    using Microsoft.AspNetCore.Http;
+
+    public class AspNetCoreHttpMessageHandler : HttpMessageHandler
     {
         private readonly RequestDelegate _application;
         private bool _disposed;
         private bool _operationStarted;
         private bool _useCookies;
 
+        /// <summary>
+        /// Create a handler using a request delegate
+        /// </summary>
+        /// <param name="application"></param>
         public AspNetCoreHttpMessageHandler(RequestDelegate application) => _application =
             application ?? throw new ArgumentNullException(nameof(application));
 
         /// <summary>
+        /// Create a handler using a Middleware delegate
         /// </summary>
         /// <param name="middleware">A middleware function that will terminate with 404 response</param>
         public AspNetCoreHttpMessageHandler(Middleware middleware) =>
@@ -35,6 +40,7 @@ namespace Aranea.HttpMessageHandler
         public int AutoRedirectLimit { private get; set; } = 20;
 
         public bool AllowAutoRedirect { private get; set; }
+
         public CookieContainer CookieContainer { get; } = new CookieContainer();
 
         public Either<Unit, InvalidOperationException> UseCookies(bool useCookies)

@@ -1,15 +1,9 @@
-﻿using System.Globalization;
-using System.Text;
-
-namespace Aranea.HttpMessageHandler
+﻿namespace Aranea.HttpMessageHandler
 {
+    using System.Text;
+
     internal static class StringExtensions
     {
-        internal static string FormatWith(this string format, params object[] args)
-        {
-            return string.Format(CultureInfo.InvariantCulture, format, args);
-        }
-
         internal static string ToCamelCase(this string s)
         {
             if (string.IsNullOrEmpty(s) || !char.IsUpper(s[0]))
