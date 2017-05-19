@@ -30,7 +30,6 @@ Task("RestorePackages")
     .IsDependentOn("SetVersionInfo")
     .Does(() =>
 {
-    NuGetRestore(solution);
     DotNetCoreRestore(solution);
 });
 
